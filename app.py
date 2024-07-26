@@ -30,8 +30,34 @@ if 'transcribed_text' not in st.session_state:
 # Function to generate response from Google Gemini API
 def get_gemini_response(input_text, image_parts, prompt):
     model = genai.GenerativeModel('gemini-1.5-flash')
-    response = model.generate_content([input_text, image_parts[0] if image_parts else None, prompt])
-    return response.text
+    
+    # Construct the payload
+    payload = []
+    
+    # Add the input text
+    if input_text:
+        payload.append({"text": input_text})
+    
+    # Add the image parts if available
+    if image_parts:
+        for part in image_parts:
+            payload.append({
+                "mime_type": part.get("mime_type", "image/jpeg"),
+                "data": part.get("data", b"")
+            })
+    
+    # Add the prompt
+    if prompt:
+        payload.append({"text": prompt})
+    
+    print(f"Payload: {payload}")
+
+    try:
+        response = model.generate_content(payload)
+        return response.text
+    except Exception as e:
+        print(f"Error: {e}")
+        return "An error occurred while generating the response."
 
 # Function to handle multi-turn conversations
 def handle_conversation(user_input):
@@ -76,7 +102,7 @@ def input_image_setup(uploaded_file):
         bytes_data = uploaded_file.getvalue()
         image_parts = [{"mime_type": uploaded_file.type, "data": bytes_data}]
         return image_parts
-    return None
+    return []  # Ensure it returns an empty list if no image is uploaded
 
 # Function to handle speech-to-text conversion
 def speech_to_text():
@@ -155,21 +181,20 @@ Let's get started on keeping your diet in check!
 
 input_text = st.text_input("Input Prompt:", key="input", value=st.session_state.transcribed_text)
 
-# Handle conversation
+# Handle conversation and image processing
 if input_text:
-    with st.spinner("Processing..."):
-        response_text = handle_conversation(input_text)
-        
-        # Personalize response if needed
-        response_text = personalize_response(response_text)
+    image_parts = input_image_setup(uploaded_file)
+    
+    with st.spinner("Processing image and input..."):
+        response = get_gemini_response(input_text, image_parts, input_prompt)
         
         # Display the response
         st.subheader("Here's What Your Calorie Doctor Says:")
-        st.write(response_text)
+        st.write(response)
         
         # Convert text response to audio
         with st.spinner("Converting text to speech..."):
-            audio_content = text_to_speech_azure(response_text, subscription_key, service_region)
+            audio_content = text_to_speech_azure(response, subscription_key, service_region)
         
         if audio_content:
             st.audio(io.BytesIO(audio_content), format='audio/wav')
@@ -202,9 +227,3 @@ with tab2:
         "speed": speed
     }
 
-# Handle user inputs and image processing
-if uploaded_file and input_text:
-    image_parts = input_image_setup(uploaded_file)
-    with st.spinner("Processing image and input..."):
-        response = get_gemini_response(input_text, image_parts, input_prompt)
-        st.write("Response from Gemini API:", response)
