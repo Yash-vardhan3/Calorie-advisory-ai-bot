@@ -1,1 +1,2 @@
 # Calorie-advisory-ai-bot
+The Calorie Advisory AI Bot is an intelligent assistant that helps users track and manage their daily calorie intake through voice interactions. It leverages the power of Google Gemini AI, Microsoft Azure Cognitive Services, and real-time speech-to-text conversion to provide personalized recommendations. The bot is built with Streamlit for a user-friendly interface, integrating advanced AI models for accurate calorie suggestions.
